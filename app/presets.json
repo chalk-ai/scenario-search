@@ -1,0 +1,46 @@
+{
+  "activities": [
+    "walking",
+    "parts_bin",
+    "watch_tray",
+    "phone_pairing",
+    "film_peeling",
+    "strap_fitting",
+    "packaging",
+    "bench_work"
+  ],
+  "presets": [
+    {
+      "id": "lit_screen",
+      "label": "Screen lit up for testing",
+      "query": "a smartwatch screen lit up during testing"
+    },
+    {
+      "id": "walking_aisle",
+      "label": "Walking the aisle",
+      "query": "walking down the aisle between workbenches",
+      "filters": { "motion": "moving" }
+    },
+    {
+      "id": "parts_bin",
+      "label": "Reaching into a parts bin",
+      "query": "reaching into a bin of metal parts"
+    },
+    {
+      "id": "watch_tray",
+      "label": "Tray of watch faces",
+      "query": "a tray full of round watch faces"
+    },
+    {
+      "id": "phone_pairing",
+      "label": "Pairing with a phone",
+      "query": "pairing a smartwatch with a phone"
+    },
+    {
+      "id": "film_peeling",
+      "label": "Peeling protective film",
+      "query": "peeling protective film off small parts",
+      "filters": { "motion": "steady" }
+    }
+  ]
+}

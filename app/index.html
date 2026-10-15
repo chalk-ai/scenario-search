@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scenario search</title>
+<style>
+  :root { --bg:#224A41; --panel:#1C3B34; --line:#32645B; --ink:#EFF5F3; --muted:#B9CFC7;
+          --accent:#BBD96D; --mint:#70CD96; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 16px; background:var(--bg); color:var(--ink);
+         font:15px/1.5 system-ui,-apple-system,sans-serif; }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-weight:500; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  form { display:flex; gap:8px; flex-wrap:wrap; }
+  input[type=text] { flex:1 1 280px; padding:10px 12px; border-radius:6px; border:1px solid var(--line);
+                     background:var(--panel); color:var(--ink); font:inherit; }
+  select { padding:10px; border-radius:6px; border:1px solid var(--line); background:var(--panel);
+           color:var(--ink); font:inherit; }
+  button { font:13px ui-monospace,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em;
+           border:0; border-radius:20px; padding:10px 18px; background:var(--accent); color:var(--bg);
+           cursor:pointer; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 20px; }
+  .presets button { background:transparent; color:var(--ink); border:1px solid var(--line);
+                    text-transform:none; letter-spacing:0; font:13px system-ui,sans-serif; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .card video { width:100%; aspect-ratio:16/9; display:block; background:#000; object-fit:cover; }
+  .meta { padding:8px 10px; font:12px ui-monospace,Menlo,monospace; color:var(--muted); }
+  .meta b { color:var(--accent); font-weight:500; }
+  pre { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px;
+        overflow:auto; font:12px/1.5 ui-monospace,Menlo,monospace; color:var(--muted); }
+  .status { color:var(--muted); font-size:13px; min-height:20px; margin:8px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Scenario search</h1>
+  <p class="sub">Search 10-second clips of first-person factory video by what happens in them. Every search is one ChalkSQL query.</p>
+  <form id="f">
+    <input id="q" type="text" maxlength="120" placeholder="Describe a scenario" aria-label="Scenario">
+    <select id="activity" aria-label="Activity"><option value="">Any activity</option></select>
+    <select id="worker" aria-label="Worker"><option value="">Any worker</option></select>
+    <button type="submit">Search</button>
+  </form>
+  <div class="presets" id="presets"></div>
+  <div class="status" id="status"></div>
+  <div class="grid" id="results"></div>
+  <pre id="sql" hidden></pre>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const post = (action, label) => {
+  // Report actions to an embedding page; never the typed text.
+  if (window.parent !== window) window.parent.postMessage({ type: "chalk-demo-interaction", action, label }, "*");
+};
+async function search(body, label) {
+  $("status").textContent = "Running ChalkSQL…";
+  const r = await fetch("api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const out = await r.json();
+  if (!r.ok) { $("status").textContent = out.detail || "Search failed"; return; }
+  $("status").textContent = `${out.rows.length} clips · ${out.cached ? "cached" : out.sql_ms + " ms"}`;
+  $("results").replaceChildren(...out.rows.map((row) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    const v = document.createElement("video");
+    Object.assign(v, { src: row.clip_url, poster: row.thumb_url, muted: true, loop: true, playsInline: true, preload: "none" });
+    v.addEventListener("mouseenter", () => { v.play(); post("play_clip"); });
+    v.addEventListener("mouseleave", () => v.pause());
+    v.addEventListener("click", () => (v.paused ? v.play() : v.pause()));
+    const m = document.createElement("div");
+    m.className = "meta";
+    m.innerHTML = `<b>${row.score.toFixed(3)}</b> · ${row.worker_id} · clip ${row.clip_index} · ${row.start_s}s · ${row.activity}`;
+    card.append(v, m);
+    return card;
+  }));
+  $("sql").hidden = false;
+  $("sql").textContent = out.sql;
+  post(label ? "select_query" : "run_search", label);
+}
+fetch("api/presets").then((r) => r.json()).then((p) => {
+  for (const a of p.activities) $("activity").append(new Option(a.replace("_", " "), a));
+  for (let i = 1; i <= 8; i++) { const w = `worker_${String(i).padStart(3, "0")}`; $("worker").append(new Option(w, w)); }
+  for (const preset of p.presets) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = preset.label;
+    b.onclick = () => { $("q").value = preset.query; search({ preset: preset.id }, preset.id); };
+    $("presets").append(b);
+  }
+  if (p.presets.length) $("presets").firstChild.click();
+});
+$("f").onsubmit = (e) => {
+  e.preventDefault();
+  const filters = {};
+  if ($("activity").value) filters.activity = $("activity").value;
+  if ($("worker").value) filters.worker = $("worker").value;
+  search({ query: $("q").value, filters });
+};
+</script>
+</body>
+</html>
