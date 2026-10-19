@@ -78,10 +78,10 @@ Needs `ffmpeg`, [uv](https://docs.astral.sh/uv/) and Chalk credentials (`chalk l
 export EMBED_TOKEN=$(openssl rand -hex 16)
 ./download.py --out raw/
 ./prep_segments.py --raw raw/ --out out/
-./deploy_app.py --env-id <env> --upload out/                 # media to the Volume, then the app
-./deploy_embedder.py --env-id <env> --app https://<app web_url>   # SigLIP 2 on a GPU
-./deploy_functions.py --env-id <env> --embedder https://<embedder web_url>
-./batch.py --env-id <env> --out out/                         # embed + tag every segment
+./deploy_app.py --upload out/ # media to the Volume, then the app
+./deploy_embedder.py # SigLIP 2 on a GPU
+./deploy_functions.py
+./batch.py # embed + tag every segment
 CHALK_ENVIRONMENT=<env> ./search_dataframe.py "a tray full of round watch faces"
 ./example.py https://<app web_url> "hands holding a lit-up watch screen"
 ```
@@ -143,5 +143,5 @@ Voxel51 subset. Model weights: Apache-2.0, Google.
 
 The SDK reads credentials, API host, and the selected environment from your existing
 `chalk login` in `~/.chalk.yml`, including project-scoped and default logins.
-For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported. Where available, `--env-id`
-overrides the target environment; otherwise the SDK uses your login or environment settings.
+For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported.
+The examples use the current environment selected by your Chalk login.

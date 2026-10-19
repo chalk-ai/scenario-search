@@ -6,7 +6,7 @@
 # ///
 """Deploy the SigLIP 2 embedder (embedder/server.py) as a GPU ScalingGroup.
 
-    EMBED_TOKEN=... ./deploy_embedder.py --env-id <environment> --app https://<app web_url>
+    EMBED_TOKEN=... ./deploy_embedder.py
 
 The embedder serves text and segment embeddings over HTTPS, reading segment frames from the app's
 /frames (the media Volume, served by deploy_app.py). The Chalk functions in deploy_functions.py call
@@ -15,25 +15,18 @@ it, so ChalkSQL and chalkdf reach the model through catalog_call.
 
 from __future__ import annotations
 
-import argparse
 import os
 import time
 from pathlib import Path
 
-from chalk_env import load_chalk_env
 
 HERE = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="scenario-embed")
-    parser.add_argument("--env-id", default=None)
-    parser.add_argument("--gpu", default="nvidia-l4")
-    parser.add_argument("--app", required=True, help="web_url of the scenario-search app")
-    args = parser.parse_args()
-    load_chalk_env(args.env_id)
     from chalkcompute import Image, ReadinessProbe, ScalingGroup
+
+    service_url = ScalingGroup.from_name("scenario-search").web_url
 
     image = (
         # The CUDA torch stack comes with the base image; pip only adds the light packages on top.
@@ -54,8 +47,8 @@ def main() -> None:
     )
     group = ScalingGroup(
         image=image,
-        name=args.name,
-        gpu=args.gpu,
+        name='scenario-embed',
+        gpu='nvidia-l4',
         cpu="4",
         memory="16Gi",
         # The 4.5 GB of weights download at startup (about a minute) instead of riding in the image.
@@ -63,7 +56,7 @@ def main() -> None:
             "PORT": "8080",
             "HF_HOME": "/tmp/hf",
             # Frames over HTTPS from the app: in this environment, GPU nodes cannot mount Volumes.
-            "FRAME_URL_TEMPLATE": args.app.rstrip("/") + "/frames/{segment_id}_{k}.jpg",
+            "FRAME_URL_TEMPLATE": service_url.rstrip("/") + "/frames/{segment_id}_{k}.jpg",
             "EMBED_TOKEN": os.environ.get("EMBED_TOKEN", ""),
         },
         entrypoint=["python", "/app/server.py"],

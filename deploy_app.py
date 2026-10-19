@@ -6,8 +6,8 @@
 # ///
 """Upload the media to a Chalk Volume and deploy the search app (app/) as a CPU ScalingGroup.
 
-    ./deploy_app.py --env-id <sql environment> --upload out/     # clips/ thumbs/ frames/ data/
-    ./deploy_app.py --env-id <sql environment>                   # redeploy the app only
+    ./deploy_app.py --upload out/ # clips/ thumbs/ frames/ data/
+    ./deploy_app.py # redeploy the app only
 
 The app runs every search as one ChalkSQL query in the same environment, authenticated with the
 ScalingGroup's own workload identity, so it holds no client secret.
@@ -28,13 +28,11 @@ VOLUME = "scenario-search-media"
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="scenario-search")
-    parser.add_argument("--env-id", default=None)
     parser.add_argument("--upload", type=Path, default=None, help="local dir holding clips/ thumbs/ frames/ data/")
     parser.add_argument("--only", nargs="*", default=None, help="subdirectories of --upload to send")
     parser.add_argument("--no-deploy", action="store_true")
     args = parser.parse_args()
-    load_chalk_env(args.env_id)
+    load_chalk_env()
     from chalkcompute import Image, ReadinessProbe, ScalingGroup, Volume
 
     volume = Volume(VOLUME)
@@ -57,10 +55,10 @@ def main() -> None:
     )
     env_id = os.environ["CHALK_ENVIRONMENT_ID"]
     # The predicted public URL of this group; ChalkSQL reads the embeddings parquet from it.
-    web_url = f"https://{env_id}-{args.name}.staging.internal.gcp.chalk.dev"
+    web_url = f'https://{env_id}-scenario-search.staging.internal.gcp.chalk.dev'
     group = ScalingGroup(
         image=image,
-        name=args.name,
+        name='scenario-search',
         cpu="2",
         memory="4Gi",
         env={

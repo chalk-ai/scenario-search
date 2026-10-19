@@ -6,7 +6,7 @@
 # ///
 """Deploy the embedding model as two Chalk functions, so ChalkSQL and chalkdf can call it.
 
-    EMBED_TOKEN=... ./deploy_functions.py --env-id <sql environment> --embedder https://<embedder web_url>
+    EMBED_TOKEN=... ./deploy_functions.py
 
 Every query engine in the environment then reaches them by catalog name:
 
@@ -19,24 +19,19 @@ forward to the SigLIP 2 ScalingGroup from deploy_embedder.py, which runs the mod
 
 from __future__ import annotations
 
-import argparse
 import os
 
-from chalk_env import load_chalk_env
 from embed_functions import scenario_embed_segment, scenario_embed_text
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--env-id", default=None)
-    parser.add_argument("--embedder", required=True, help="web_url of the scenario-embed ScalingGroup")
-    args = parser.parse_args()
-    load_chalk_env(args.env_id)
     import chalkcompute
-    from chalkcompute import Image, RemoteFunction
+    from chalkcompute import Image, RemoteFunction, ScalingGroup
+
+    service_url = ScalingGroup.from_name("scenario-embed").web_url
 
     image = Image.debian_slim(python_version="3.12").pip_install(["httpx==0.28.1"])
-    env = {"EMBEDDER_URL": args.embedder, "EMBED_TOKEN": os.environ.get("EMBED_TOKEN", "")}
+    env = {"EMBEDDER_URL": service_url, "EMBED_TOKEN": os.environ.get("EMBED_TOKEN", "")}
     for fn, name in (
         (scenario_embed_text, "scenario-embed-text"),
         (scenario_embed_segment, "scenario-embed-segment"),
