@@ -6,7 +6,7 @@
 # ///
 """The same scenario search as the page's SQL, written with the Chalk DataFrame API.
 
-    CHALK_ENVIRONMENT=<env id> ./search_dataframe.py "a tray full of round watch faces" [--activity walking] \
+    ./search_dataframe.py "a tray full of round watch faces" [--activity walking] \
         [--app https://<app web_url>]
 
 The plan runs as a job in that environment: it embeds the text on the GPU through the Chalk function,
