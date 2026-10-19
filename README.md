@@ -138,3 +138,10 @@ The batch embeddings match a local run of the same model to cosine similarity 1.
 
 Code: Apache-2.0 (see `LICENSE`). Footage: Apache-2.0, from Egocentric-10K by Build AI via the
 Voxel51 subset. Model weights: Apache-2.0, Google.
+
+## Local authentication
+
+The SDK reads credentials, API host, and the selected environment from your existing
+`chalk login` in `~/.chalk.yml`, including project-scoped and default logins.
+For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported. Where available, `--env-id`
+overrides the target environment; otherwise the SDK uses your login or environment settings.

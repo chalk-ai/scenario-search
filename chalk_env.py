@@ -1,18 +1,19 @@
-"""Chalk credentials for the deploy scripts: the CHALK_* environment, or `chalk config` in this directory."""
+"""Resolve non-secret routing settings with the SDK's ambient Chalk login."""
 
 from __future__ import annotations
 
-import json
 import os
-import subprocess
 
 
 def load_chalk_env(env_id: str | None) -> None:
-    if "CHALK_CLIENT_ID" not in os.environ:
-        cfg = json.loads(subprocess.check_output(["chalk", "config", "--json"]))
-        os.environ["CHALK_API_SERVER"] = cfg["apiServer"]["value"]
-        os.environ["CHALK_CLIENT_ID"] = cfg["clientId"]["value"]
-        os.environ["CHALK_CLIENT_SECRET"] = cfg["clientSecret"]["value"]
-        os.environ.setdefault("CHALK_ENVIRONMENT_ID", cfg["environment"]["value"])
+    from chalkcompute import ConnectClient
+
     if env_id:
-        os.environ["CHALK_ENVIRONMENT_ID"] = env_id
+        os.environ["CHALK_ENVIRONMENT"] = env_id
+    client = ConnectClient()
+    try:
+        client._ensure_auth()
+        os.environ["CHALK_API_SERVER"] = client._api_server
+        os.environ["CHALK_ENVIRONMENT_ID"] = client._env_id
+    finally:
+        client.close()

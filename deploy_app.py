@@ -48,7 +48,8 @@ def main() -> None:
 
     image = (
         Image.debian_slim(python_version="3.12")
-        .pip_install(["httpx==0.28.1", "pyarrow==21.0.0", "fastapi==0.116.1", "uvicorn[standard]==0.35.0"])
+        .pip_install(["httpx==0.28.1", "pyarrow==21.0.0",
+                "chalkcompute==2.13.5", "fastapi==0.116.1", "uvicorn[standard]==0.35.0"])
         .add_local_file(str(HERE / "app/server.py"), "/app/server.py", strategy="copy")
         .add_local_file(str(HERE / "app/index.html"), "/web/index.html", strategy="copy")
         .add_local_file(str(HERE / "app/presets.json"), "/web/presets.json", strategy="copy")

@@ -9,9 +9,7 @@ Volume mounted at MEDIA_DIR.
 from __future__ import annotations
 
 import asyncio
-import base64
 import hashlib
-import io
 import json
 import os
 import re
@@ -20,8 +18,6 @@ from collections import OrderedDict, deque
 from pathlib import Path
 from typing import Any, Literal
 
-import httpx
-import pyarrow.parquet as pq
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -30,8 +26,6 @@ from pydantic import BaseModel, Field
 
 WEB = Path(os.environ.get("WEB_DIR", "/web"))
 MEDIA = Path(os.environ.get("MEDIA_DIR", "/media"))
-API = os.environ["CHALK_API_SERVER"].rstrip("/")
-ENV_ID = os.environ["CHALK_ENVIRONMENT_ID"]
 
 
 def versioned(url: str, path: Path) -> str:
@@ -75,33 +69,9 @@ for sub in ("clips", "thumbs", "frames", "data"):
     if (MEDIA / sub).is_dir():
         app.mount(f"/{sub}", StaticFiles(directory=MEDIA / sub), name=sub)
 
-_client = httpx.AsyncClient(timeout=120)
-_token: dict[str, Any] = {"value": None, "expires": 0.0}
 _inflight = asyncio.Semaphore(4)
 _cache: OrderedDict[str, tuple[float, dict[str, Any]]] = OrderedDict()
 _calls: dict[str, deque[float]] = {"free": deque(), "all": deque()}
-
-
-async def token() -> str:
-    # chalk_identity=True mounts a short-lived workload JWT and rotates it in place, so it is re-read
-    # on every call. Client credentials are only a local-run fallback.
-    identity_file = os.environ.get("CHALK_WEB_IDENTITY_TOKEN_FILE")
-    if identity_file and Path(identity_file).exists():
-        return Path(identity_file).read_text().strip()
-    if _token["value"] and time.time() < _token["expires"] - 300:
-        return _token["value"]
-    r = await _client.post(
-        f"{API}/v1/oauth/token",
-        json={
-            "client_id": os.environ["CHALK_CLIENT_ID"],
-            "client_secret": os.environ["CHALK_CLIENT_SECRET"],
-            "grant_type": "client_credentials",
-        },
-    )
-    r.raise_for_status()
-    body = r.json()
-    _token.update(value=body["access_token"], expires=time.time() + float(body.get("expires_in", 3600)))
-    return _token["value"]
 
 
 def sql_literal(text: str) -> str:
@@ -146,22 +116,18 @@ def take(kind: str, limit: int) -> None:
 
 
 async def run_sql(query: str) -> tuple[list[dict[str, Any]], float]:
+    from chalkcompute import SQLError, SQLClient
+
+    def query_rows() -> list[dict[str, Any]]:
+        with SQLClient() as client:
+            return client.query(query, timeout=120).to_arrow().to_pylist()
+
     t0 = time.perf_counter()
-    r = await _client.post(
-        f"{API}/chalk.protosql.v1.SqlService/ExecuteSqlQuery",
-        headers={
-            "Authorization": f"Bearer {await token()}",
-            "X-Chalk-Env-Id": ENV_ID,
-            "x-chalk-deployment-type": "engine-grpc",
-        },
-        json={"query": query, "syncOptions": {}},
-    )
+    try:
+        rows = await asyncio.to_thread(query_rows)
+    except SQLError as exc:
+        raise HTTPException(502, f"ChalkSQL error: {str(exc)[:300]}") from exc
     ms = (time.perf_counter() - t0) * 1000
-    r.raise_for_status()
-    body = r.json()
-    if "parquet" not in body:
-        raise HTTPException(502, f"ChalkSQL error: {json.dumps(body.get('errors', body))[:300]}")
-    rows = pq.read_table(io.BytesIO(base64.b64decode(body["parquet"]))).to_pylist()
     for row in rows:
         row["score"] = round(float(row["score"]), 4)
         row["motion"] = round(float(row["motion"]), 1)
