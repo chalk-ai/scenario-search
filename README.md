@@ -70,19 +70,18 @@ download.py ─► prep_segments.py ─► out/{clips,thumbs,frames,data}
 
 ## Run it
 
-Needs `ffmpeg`, [uv](https://docs.astral.sh/uv/) and Chalk credentials (`chalk login`, or the
-`CHALK_CLIENT_ID` / `CHALK_CLIENT_SECRET` / `CHALK_API_SERVER` environment variables). Pick a random
+Needs `ffmpeg`, [uv](https://docs.astral.sh/uv/) and your existing `chalk login`. Pick a random
 `EMBED_TOKEN`; the GPU group only answers requests that carry it.
 
 ```bash
 export EMBED_TOKEN=$(openssl rand -hex 16)
 ./download.py --out raw/
 ./prep_segments.py --raw raw/ --out out/
-./deploy_app.py --env-id <env> --upload out/                 # media to the Volume, then the app
-./deploy_embedder.py --env-id <env> --app https://<app web_url>   # SigLIP 2 on a GPU
-./deploy_functions.py --env-id <env> --embedder https://<embedder web_url>
-./batch.py --env-id <env> --out out/                         # embed + tag every segment
-CHALK_ENVIRONMENT=<env> ./search_dataframe.py "a tray full of round watch faces"
+./deploy_app.py --upload out/ # media to the Volume, then the app
+./deploy_embedder.py # SigLIP 2 on a GPU
+./deploy_functions.py
+./batch.py # embed + tag every segment
+./search_dataframe.py "a tray full of round watch faces"
 ./example.py https://<app web_url> "hands holding a lit-up watch screen"
 ```
 
@@ -138,3 +137,10 @@ The batch embeddings match a local run of the same model to cosine similarity 1.
 
 Code: Apache-2.0 (see `LICENSE`). Footage: Apache-2.0, from Egocentric-10K by Build AI via the
 Voxel51 subset. Model weights: Apache-2.0, Google.
+
+## Local authentication
+
+The SDK reads credentials, API host, and the selected environment from your existing
+`chalk login` in `~/.chalk.yml`, including project-scoped and default logins.
+For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported.
+The examples use the current environment selected by your Chalk login.
