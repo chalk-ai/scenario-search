@@ -18,6 +18,7 @@ from collections import OrderedDict, deque
 from pathlib import Path
 from typing import Any, Literal
 
+from chalkcompute import ScalingGroup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -36,7 +37,7 @@ def versioned(url: str, path: Path) -> str:
 
 
 # The parquet ChalkSQL reads: this app's own /data/segments.parquet, over HTTPS.
-SEGMENTS_PARQUET = versioned(os.environ["SEGMENTS_PARQUET"], MEDIA / "data" / "segments.parquet")
+SEGMENTS_PARQUET = versioned(ScalingGroup.from_name("scenario-search").web_url.rstrip("/") + "/data/segments.parquet", MEDIA / "data" / "segments.parquet")
 MAX_QUERY_CHARS = 120
 # Replica-wide budgets: the gateway hides client addresses, so limits apply to all visitors together.
 FREE_TEXT_PER_MINUTE = int(os.environ.get("FREE_TEXT_PER_MINUTE", "20"))

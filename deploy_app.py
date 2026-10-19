@@ -16,11 +16,9 @@ ScalingGroup's own workload identity, so it holds no client secret.
 from __future__ import annotations
 
 import argparse
-import os
 import time
 from pathlib import Path
 
-from chalk_env import load_chalk_env
 
 HERE = Path(__file__).resolve().parent
 VOLUME = "scenario-search-media"
@@ -32,7 +30,6 @@ def main() -> None:
     parser.add_argument("--only", nargs="*", default=None, help="subdirectories of --upload to send")
     parser.add_argument("--no-deploy", action="store_true")
     args = parser.parse_args()
-    load_chalk_env()
     from chalkcompute import Image, ReadinessProbe, ScalingGroup, Volume
 
     volume = Volume(VOLUME)
@@ -53,9 +50,6 @@ def main() -> None:
         .add_local_file(str(HERE / "app/presets.json"), "/web/presets.json", strategy="copy")
         .workdir("/app")
     )
-    env_id = os.environ["CHALK_ENVIRONMENT_ID"]
-    # The predicted public URL of this group; ChalkSQL reads the embeddings parquet from it.
-    web_url = f'https://{env_id}-scenario-search.staging.internal.gcp.chalk.dev'
     group = ScalingGroup(
         image=image,
         name='scenario-search',
@@ -65,9 +59,6 @@ def main() -> None:
             "PORT": "8080",
             "WEB_DIR": "/web",
             "MEDIA_DIR": "/media",
-            "CHALK_API_SERVER": os.environ["CHALK_API_SERVER"],
-            "CHALK_ENVIRONMENT_ID": env_id,
-            "SEGMENTS_PARQUET": f"{web_url}/data/segments.parquet",
         },
         entrypoint=["python", "/app/server.py"],
         port=8080,

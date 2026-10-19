@@ -70,8 +70,7 @@ download.py ─► prep_segments.py ─► out/{clips,thumbs,frames,data}
 
 ## Run it
 
-Needs `ffmpeg`, [uv](https://docs.astral.sh/uv/) and Chalk credentials (`chalk login`, or the
-`CHALK_CLIENT_ID` / `CHALK_CLIENT_SECRET` / `CHALK_API_SERVER` environment variables). Pick a random
+Needs `ffmpeg`, [uv](https://docs.astral.sh/uv/) and your existing `chalk login`. Pick a random
 `EMBED_TOKEN`; the GPU group only answers requests that carry it.
 
 ```bash
@@ -82,7 +81,7 @@ export EMBED_TOKEN=$(openssl rand -hex 16)
 ./deploy_embedder.py # SigLIP 2 on a GPU
 ./deploy_functions.py
 ./batch.py # embed + tag every segment
-CHALK_ENVIRONMENT=<env> ./search_dataframe.py "a tray full of round watch faces"
+./search_dataframe.py "a tray full of round watch faces"
 ./example.py https://<app web_url> "hands holding a lit-up watch screen"
 ```
 
